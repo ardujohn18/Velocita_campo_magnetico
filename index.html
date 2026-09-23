@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulazione Campo Magnetico Rotante - Avvolgimenti Corretti</title>
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #1e293b;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --border-color: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      max-width: 950px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    p.subtitle {
+      font-size: 0.95rem;
+      color: #64748b;
+    }
+
+    .controls-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+      width: 100%;
+      max-width: 1000px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      align-items: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #334155;
+    }
+
+    select, button, input[type=range] {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background-color: #fff;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      font-weight: 600;
+      transition: background 0.2s;
+      height: 38px;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+
+    button.secondary {
+      background-color: #475569;
+    }
+
+    button.secondary:hover {
+      background-color: #334155;
+    }
+
+    .highlight-select {
+      border: 2px solid var(--primary);
+      background-color: #f0f9ff;
+      font-weight: bold;
+      color: #0369a1;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    @media (max-width: 850px) {
+      .grid-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card h2 {
+      font-size: 1.05rem;
+      margin-bottom: 12px;
+      color: #1e293b;
+      text-align: center;
+    }
+
+    canvas {
+      background-color: #ffffff;
+      border-radius: 8px;
+    }
+
+    .info-bar {
+      width: 100%;
+      max-width: 1000px;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 12px 20px;
+      margin-top: 15px;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 15px;
+      font-size: 0.95rem;
+      color: #0369a1;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .info-item strong {
+      font-size: 1.1rem;
+      color: #0c4a6e;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Simulazione Campo Magnetico Rotante (Fasi Discrete)</h1>
+    <p class="subtitle">Modello coerente con gli avvolgimenti in serie del documento originale</p>
+  </header>
+
+  <div class="controls-panel">
+    <!-- Configurazione Poli -->
+    <div class="control-group">
+      <label for="polesSelect">Numero Poli (p):</label>
+      <select id="polesSelect" class="highlight-select">
+        <option value="2">2 Poli (1 Coppia Polare, p = 1)</option>
+        <option value="4">4 Poli (2 Coppie Polari, p = 2)</option>
+      </select>
+    </div>
+
+    <!-- Modalità Simulazione -->
+    <div class="control-group">
+      <label for="modeSelect">Modalità:</label>
+      <select id="modeSelect">
+        <option value="discrete">Discreta (Passo-Passo)</option>
+        <option value="continuous">Continua (Molto Lenta)</option>
+      </select>
+    </div>
+
+    <!-- Istanti per Periodo -->
+    <div class="control-group" id="stepsGroup">
+      <label for="stepsSelect">Istanti per Periodo (N):</label>
+      <select id="stepsSelect">
+        <option value="8">8 istanti (Δα = 45°)</option>
+        <option value="12">12 istanti (Δα = 30°)</option>
+        <option value="16">16 istanti (Δα = 22.5°)</option>
+        <option value="20" selected>20 istanti (Δα = 18°)</option>
+      </select>
+    </div>
+
+    <!-- Controlli Avanzamento -->
+    <div class="control-group" style="justify-content: flex-end;">
+      <button id="stepBtn" class="secondary">Passo Successivo (k+1)</button>
+      <button id="playBtn" style="display:none;">Pausa / Riprendi</button>
+    </div>
+
+    <!-- Regolazione Velocità -->
+    <div class="control-group" id="speedGroup" style="display:none;">
+      <div style="display:flex; justify-content:space-between; width:100%;">
+        <label for="speedSlider">Velocità Animazione:</label>
+        <span id="speedVal" style="font-weight:bold; font-size:0.85rem; color:#0284c7;">0.01x</span>
+      </div>
+      <input type="range" id="speedSlider" min="0.002" max="0.05" value="0.01" step="0.002">
+    </div>
+  </div>
+
+  <div class="grid-container">
+    <div class="card">
+      <h2>Correnti Bifasi i₁(t) e i₂(t)</h2>
+      <canvas id="wavesCanvas" width="440" height="300"></canvas>
+    </div>
+
+    <div class="card">
+      <h2 id="statorTitle">Statore e Avvolgimenti Reali</h2>
+      <canvas id="statorCanvas" width="300" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="info-bar">
+    <div class="info-item">
+      <span>Istante Corrente:</span>
+      <strong id="stepInfo">k = 0 / 20</strong>
+    </div>
+    <div class="info-item">
+      <span>Corrente Fase 1 (i₁):</span>
+      <strong id="i1Val" style="color: #2563eb;">0.00 A</strong>
+    </div>
+    <div class="info-item">
+      <span>Corrente Fase 2 (i₂):</span>
+      <strong id="i2Val" style="color: #ea580c;">1.00 A</strong>
+    </div>
+    <div class="info-item">
+      <span>Velocità (n):</span>
+      <strong id="rpmVal">3000 RPM</strong>
+    </div>
+  </div>
+
+  <script>
+    const wavesCanvas = document.getElementById('wavesCanvas');
+    const ctxWaves = wavesCanvas.getContext('2d');
+    const statorCanvas = document.getElementById('statorCanvas');
+    const ctxStator = statorCanvas.getContext('2d');
+
+    const polesSelect = document.getElementById('polesSelect');
+    const modeSelect = document.getElementById('modeSelect');
+    const stepsSelect = document.getElementById('stepsSelect');
+    const stepBtn = document.getElementById('stepBtn');
+    const playBtn = document.getElementById('playBtn');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedVal = document.getElementById('speedVal');
+    const stepsGroup = document.getElementById('stepsGroup');
+    const speedGroup = document.getElementById('speedGroup');
+
+    const stepInfo = document.getElementById('stepInfo');
+    const i1Val = document.getElementById('i1Val');
+    const i2Val = document.getElementById('i2Val');
+    const rpmVal = document.getElementById('rpmVal');
+    const statorTitle = document.getElementById('statorTitle');
+
+    let freq = 50;
+    let poles = parseInt(polesSelect.value);
+    let pPairs = poles / 2;
+    let mode = modeSelect.value;
+    let N_steps = parseInt(stepsSelect.value);
+    let currentStep = 0;
+
+    let isRunning = false;
+    let simTime = 0;
+    let lastTimestamp = 0;
+    let speedMult = parseFloat(speedSlider.value);
+
+    function updateState() {
+      poles = parseInt(polesSelect.value);
+      pPairs = poles / 2;
+      mode = modeSelect.value;
+      N_steps = parseInt(stepsSelect.value);
+      speedMult = parseFloat(speedSlider.value);
+
+      speedVal.innerText = speedMult.toFixed(3) + "x";
+      statorTitle.innerText = `Statore a ${poles} Poli (${pPairs} ${pPairs === 1 ? 'coppia polare' : 'coppie polari'})`;
+
+      const rpm = (60 * freq) / pPairs;
+      rpmVal.innerText = rpm.toFixed(0) + " RPM";
+
+      if (mode === 'discrete') {
+        stepsGroup.style.display = 'flex';
+        speedGroup.style.display = 'none';
+        stepBtn.style.display = 'block';
+        playBtn.style.display = 'none';
+        isRunning = false;
+
+        const T = 1 / freq;
+        simTime = (currentStep / N_steps) * T;
+      } else {
+        stepsGroup.style.display = 'none';
+        speedGroup.style.display = 'flex';
+        stepBtn.style.display = 'none';
+        playBtn.style.display = 'block';
+        isRunning = true;
+      }
+
+      render();
+    }
+
+    polesSelect.addEventListener('change', updateState);
+    modeSelect.addEventListener('change', () => { currentStep = 0; updateState(); });
+    stepsSelect.addEventListener('change', () => { currentStep = 0; updateState(); });
+    speedSlider.addEventListener('input', updateState);
+
+    stepBtn.addEventListener('click', () => {
+      currentStep = (currentStep + 1) % N_steps;
+      const T = 1 / freq;
+      simTime = (currentStep / N_steps) * T;
+      render();
+    });
+
+    playBtn.addEventListener('click', () => {
+      isRunning = !isRunning;
+      playBtn.innerText = isRunning ? "Pausa" : "Riprendi";
+    });
+
+    function drawWaves(t) {
+      const w = wavesCanvas.width;
+      const h = wavesCanvas.height;
+      ctxWaves.clearRect(0, 0, w, h);
+
+      const T = 1 / freq;
+      const omegaE = 2 * Math.PI * freq;
+      const centerY = h / 2;
+
+      ctxWaves.strokeStyle = '#94a3b8';
+      ctxWaves.lineWidth = 1;
+      ctxWaves.beginPath();
+      ctxWaves.moveTo(35, centerY);
+      ctxWaves.lineTo(w - 15, centerY);
+      ctxWaves.stroke();
+
+      ctxWaves.beginPath();
+      ctxWaves.moveTo(35, 20);
+      ctxWaves.lineTo(35, h - 20);
+      ctxWaves.stroke();
+
+      const timeSpan = T;
+      const pxPerSec = (w - 55) / timeSpan;
+      const amp = h * 0.35;
+
+      if (mode === 'discrete') {
+        ctxWaves.strokeStyle = '#f1f5f9';
+        ctxWaves.lineWidth = 1;
+        for (let k = 0; k <= N_steps; k++) {
+          const xK = 35 + (k / N_steps) * (w - 55);
+          ctxWaves.beginPath();
+          ctxWaves.moveTo(xK, 20);
+          ctxWaves.lineTo(xK, h - 20);
+          ctxWaves.stroke();
+        }
+      }
+
+      // i1 = sin(w*t)
+      ctxWaves.strokeStyle = '#2563eb';
+      ctxWaves.lineWidth = 2.5;
+      ctxWaves.beginPath();
+      for (let x = 0; x <= (w - 55); x++) {
+        const timeVal = (x / pxPerSec);
+        const y = centerY - amp * Math.sin(omegaE * timeVal);
+        if (x === 0) ctxWaves.moveTo(35 + x, y);
+        else ctxWaves.lineTo(35 + x, y);
+      }
+      ctxWaves.stroke();
+
+      // i2 = cos(w*t)
+      ctxWaves.strokeStyle = '#ea580c';
+      ctxWaves.lineWidth = 2.5;
+      ctxWaves.beginPath();
+      for (let x = 0; x <= (w - 55); x++) {
+        const timeVal = (x / pxPerSec);
+        const y = centerY - amp * Math.cos(omegaE * timeVal);
+        if (x === 0) ctxWaves.moveTo(35 + x, y);
+        else ctxWaves.lineTo(35 + x, y);
+      }
+      ctxWaves.stroke();
+
+      // Cursore istante
+      const currentModT = t % timeSpan;
+      const cursorX = 35 + currentModT * pxPerSec;
+
+      ctxWaves.strokeStyle = '#dc2626';
+      ctxWaves.lineWidth = 2;
+      ctxWaves.setLineDash([4, 4]);
+      ctxWaves.beginPath();
+      ctxWaves.moveTo(cursorX, 15);
+      ctxWaves.lineTo(cursorX, h - 15);
+      ctxWaves.stroke();
+      ctxWaves.setLineDash([]);
+
+      const i1_val = Math.sin(omegaE * t);
+      const i2_val = Math.cos(omegaE * t);
+
+      ctxWaves.fillStyle = '#dc2626';
+      ctxWaves.beginPath();
+      ctxWaves.arc(cursorX, centerY - amp * i1_val, 5, 0, Math.PI * 2);
+      ctxWaves.fill();
+
+      ctxWaves.beginPath();
+      ctxWaves.arc(cursorX, centerY - amp * i2_val, 5, 0, Math.PI * 2);
+      ctxWaves.fill();
+    }
+
+    function drawStator(t) {
+      const w = statorCanvas.width;
+      const h = statorCanvas.height;
+      const centerX = w / 2;
+      const centerY = h / 2;
+      const radius = 100;
+
+      ctxStator.clearRect(0, 0, w, h);
+
+      // Statore
+      ctxStator.strokeStyle = '#334155';
+      ctxStator.lineWidth = 4;
+      ctxStator.beginPath();
+      ctxStator.arc(centerX, centerY, radius + 18, 0, Math.PI * 2);
+      ctxStator.stroke();
+
+      ctxStator.lineWidth = 2;
+      ctxStator.beginPath();
+      ctxStator.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctxStator.stroke();
+
+      const omegaE = 2 * Math.PI * freq;
+      const i1 = Math.sin(omegaE * t); // Fase 1 (Blu)
+      const i2 = Math.cos(omegaE * t); // Fase 2 (Arancione)
+
+      // Mappatura esatta delle cave in base al fascio di appartenenza
+      const numSlots = 16;
+      for (let i = 0; i < numSlots; i++) {
+        const slotAngle = (i * 2 * Math.PI) / numSlots;
+        const slotX = centerX + radius * Math.cos(slotAngle);
+        const slotY = centerY + radius * Math.sin(slotAngle);
+
+        let phaseOwner = 1; // 1 per Fase 1, 2 per Fase 2
+        let currentVal = 0;
+
+        if (poles === 2) {
+          // 2 Poli: Fase 1 occupa le cave in alto/basso, Fase 2 quelle a destra/sinistra
+          if ((i >= 2 && i <= 5) || (i >= 10 && i <= 13)) {
+            phaseOwner = 1;
+            // Se in alto la corrente entra (+), in basso esce (-)
+            currentVal = (i >= 2 && i <= 5) ? i1 : -i1;
+          } else {
+            phaseOwner = 2;
+            currentVal = (i < 2 || i > 13) ? i2 : -i2;
+          }
+        } else {
+          // 4 Poli: Alternanza a quattro quadranti
+          if ((i >= 1 && i <= 2) || (i >= 5 && i <= 6) || (i >= 9 && i <= 10) || (i >= 13 && i <= 14)) {
+            phaseOwner = 1;
+            currentVal = ((i >= 1 && i <= 2) || (i >= 9 && i <= 10)) ? i1 : -i1;
+          } else {
+            phaseOwner = 2;
+            currentVal = ((i >= 3 && i <= 4) || (i >= 11 && i <= 12)) ? i2 : -i2;
+          }
+        }
+
+        const color = phaseOwner === 1 ? '#2563eb' : '#ea580c';
+
+        ctxStator.beginPath();
+        ctxStator.arc(slotX, slotY, 7, 0, Math.PI * 2);
+        ctxStator.fillStyle = '#fff';
+        ctxStator.fill();
+        ctxStator.strokeStyle = color;
+        ctxStator.lineWidth = 2;
+        ctxStator.stroke();
+
+        // Disegno simbolo (+ / - / vuoto se i=0)
+        ctxStator.fillStyle = color;
+        ctxStator.strokeStyle = color;
+        ctxStator.lineWidth = 1.5;
+
+        if (Math.abs(currentVal) > 0.05) {
+          if (currentVal > 0) {
+            // Croce (+)
+            ctxStator.beginPath();
+            ctxStator.moveTo(slotX - 3, slotY - 3);
+            ctxStator.lineTo(slotX + 3, slotY + 3);
+            ctxStator.moveTo(slotX + 3, slotY - 3);
+            ctxStator.lineTo(slotX - 3, slotY + 3);
+            ctxStator.stroke();
+          } else {
+            // Punto (.)
+            ctxStator.beginPath();
+            ctxStator.arc(slotX, slotY, 2.5, 0, Math.PI * 2);
+            ctxStator.fill();
+          }
+        }
+      }
+
+      // Magnete/Campo Rotante Resultante
+      const thetaE = omegaE * t;
+      const thetaM = thetaE / pPairs;
+
+      ctxStator.save();
+      ctxStator.translate(centerX, centerY);
+      ctxStator.rotate(-thetaM + Math.PI / 2);
+
+      if (poles === 2) {
+        const rectW = 32;
+        const rectH = 70;
+
+        ctxStator.fillStyle = '#dc2626';
+        ctxStator.fillRect(-rectW / 2, -rectH / 2, rectW, rectH / 2);
+        ctxStator.fillStyle = '#ffffff';
+        ctxStator.font = 'bold 15px sans-serif';
+        ctxStator.textAlign = 'center';
+        ctxStator.textBaseline = 'middle';
+        ctxStator.fillText('N', 0, -rectH / 4);
+
+        ctxStator.fillStyle = '#2563eb';
+        ctxStator.fillRect(-rectW / 2, 0, rectW, rectH / 2);
+        ctxStator.fillStyle = '#ffffff';
+        ctxStator.fillText('S', 0, rectH / 4);
+
+        ctxStator.strokeStyle = '#0f172a';
+        ctxStator.lineWidth = 2;
+        ctxStator.strokeRect(-rectW / 2, -rectH / 2, rectW, rectH);
+      } else {
+        const size = 40;
+        const arm = 20;
+
+        ctxStator.fillStyle = '#dc2626';
+        ctxStator.fillRect(-arm / 2, -size, arm, size);
+        ctxStator.fillStyle = '#2563eb';
+        ctxStator.fillRect(0, -arm / 2, size, arm);
+        ctxStator.fillStyle = '#dc2626';
+        ctxStator.fillRect(-arm / 2, 0, arm, size);
+        ctxStator.fillStyle = '#2563eb';
+        ctxStator.fillRect(-size, -arm / 2, size, arm);
+
+        ctxStator.fillStyle = '#ffffff';
+        ctxStator.font = 'bold 12px sans-serif';
+        ctxStator.textAlign = 'center';
+        ctxStator.textBaseline = 'middle';
+
+        ctxStator.fillText('N', 0, -size / 1.6);
+        ctxStator.fillText('S', size / 1.6, 0);
+        ctxStator.fillText('N', 0, size / 1.6);
+        ctxStator.fillText('S', -size / 1.6, 0);
+      }
+
+      ctxStator.restore();
+
+      // Info pannello
+      i1Val.innerText = i1.toFixed(2) + " A";
+      i2Val.innerText = i2.toFixed(2) + " A";
+      if (mode === 'discrete') {
+        stepInfo.innerText = `k = ${currentStep} / ${N_steps}`;
+      } else {
+        stepInfo.innerText = `t = ${(t * 1000).toFixed(1)} ms`;
+      }
+    }
+
+    function render() {
+      drawWaves(simTime);
+      drawStator(simTime);
+    }
+
+    function animate(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = (timestamp - lastTimestamp) / 1000;
+      lastTimestamp = timestamp;
+
+      if (isRunning && mode === 'continuous') {
+        simTime += dt * speedMult;
+        render();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    updateState();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
